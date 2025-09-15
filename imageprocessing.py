@@ -152,8 +152,8 @@ def sobel_edge_detection(image, k_size=3):
     """
     match k_size:
         case (int() | None) if k_size % 2 == 1: 
-            sobel_x = cv2.Sobel(image, cv2.CV_64F, 0, 1, k_size)
-            sobel_y = cv2.Sobel(image, cv2.CV_64F, 1, 0, k_size)
+            sobel_x = cv2.Sobel(image, cv2.CV_64F, 1, 0, k_size)
+            sobel_y = cv2.Sobel(image, cv2.CV_64F, 0, 1, k_size)
             return cv2.magnitude(sobel_x, sobel_y)
         case _:
             raise ValueError("Invalid Ksize, it must be an odd value up to 7")
@@ -214,6 +214,17 @@ def adaptive_thresholding(image, max_value=255, adaptive_method=cv2.ADAPTIVE_THR
         case _:
             raise ValueError("Invalid parameters for adaptive thresholding.")
         
+def color_thresholding(image, lower_bound, upper_bound):
+    """
+    Function to perform color thresholding on an input image.
+    inputs:
+        image: input image.
+        lower_bound: Lower HSV bound (e.g., np.array([20, 100, 100])).
+        upper_bound: Upper HSV bound (e.g., np.array([30, 255, 255])).
+    """
+    hsv_img = convert_to_hsv(image)
+    return cv2.inRange(hsv_img, lower_bound, upper_bound)
+        
 # ---- 6. Histogram Operations ---- #
 def plot_histogram(image, image_color):
     """ 
@@ -252,11 +263,12 @@ def apply_histogram_equalization(image):
     inputs:
         image: input grayscale image.
     """
-    if len(image.shape) == 2:  # Grayscale image
-        image_eq = cv2.equalizeHist(image)
-        return cv2.cvtColor(image_eq, cv2.COLOR_GRAY2BGR)
+    if len(image.shape) == 3:
+        gray_img = convert_to_grayscale(image)
     else:
-        raise ValueError("Input image must be a grayscale image.")
+        gray = image
+    image_eq = cv2.equalizeHist(gray)
+    return cv2.cvtColor(image_eq, cv2.COLOR_GRAY2BGR)
     
 def apply_clahe(image, clip_limit=2.0, tile_grid_size=(8, 8)):
     """ 
@@ -276,17 +288,46 @@ def apply_clahe(image, clip_limit=2.0, tile_grid_size=(8, 8)):
             raise ValueError("Invalid tile grid size. Must be a tuple of two positive integers (e.g., (8, 8)).")
         
 # ---- 7. Contours and Drawing ---- #
-def find_and_draw_contours(image, rtr_type=cv2.RETR_EXTERNAL, rtr_approximation=cv2.CHAIN_APPROX_SIMPLE, border_color=(0, 255, 0), line_thickness=3):
+def find_and_draw_contours(image, method, rtr_type=cv2.RETR_EXTERNAL, rtr_approximation=cv2.CHAIN_APPROX_SIMPLE, border_color=(0, 255, 0), line_thickness=3):
     """
     Function that finds and draws the contours on an image.
     inputs:
         image: input image.
+        method: determine what type of contour to draw (Rectangle, Circle, Ellipse, Polygon) or Normal.
         rtr_type: The type of return to be used with the find contours function.
         rtr_approximation: Type of approximation method.
         border_color: Tuple of border color for the contour drawing.
         line_thickness: Thickness of the border contour line.
     """
-    match border_color:
-        case (int(b1), int(b2), int(b3)) if b1 > 0 and b2 > 0 and b3 > 0:
-            gray_image = convert_to_grayscale(image)
-            
+    image_copy = image.copy()
+    gray_image = convert_to_grayscale(image)
+    _, thresh = cv2.threshold(gray_image, 127, 255, cv2.THRESH_BINARY)
+    
+    contours, _ = cv2.findContours(thresh, rtr_type, rtr_approximation)
+    
+    match method:
+        case 'Rectangle':
+            for contour in contours:
+                x, y, w, h = cv2.boundingRect(contour)
+                cv2.rectangle(image_copy, (x, y), (x + w, y + h), border_color, line_thickness)
+        case 'Circle':
+            for contour in contours:
+                (x, y), radius = cv2.minEnclosingCircle(contour)
+                center = (int(x), int(y))
+                radius = int(radius)
+                cv2.circle(image_copy, center, radius, border_color, line_thickness)
+        case 'Ellipse':
+            for contour in contours:
+                if len(contour) >= 5: 
+                    ellipse = cv2.fitEllipse(contour)
+                    cv2.ellipse(image_copy, ellipse, border_color, line_thickness)
+        case 'Polygon':
+            for contour in contours:
+                epsilon = 0.02 * cv2.arcLength(contour, True)
+                approx = cv2.approxPolyDP(contour, epsilon, True)
+                cv2.drawContours(image_copy, [approx], -1, border_color, line_thickness)
+        case 'Normal':
+            cv2.drawContours(image_copy, contours, -1, border_color, line_thickness)
+        case _:
+            raise ValueError("Invalid method. Must be 'Rectangle', 'Circle', 'Ellipse', 'Polygon', or 'Normal'.")
+    return image_copy
