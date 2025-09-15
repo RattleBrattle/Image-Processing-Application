@@ -16,6 +16,8 @@
     - 0.2: Finished all functions (09/15/2025)
     - 0.3: Added new functions and improved error handling (09/15/2025)
     - 0.4: More new functions. (09/15/2025)
+    - 0.5: Added more functions (09/15/2025)
+    - 0.6: Tested all functions output in test.ipynb notebook (09/15/2025)
 """
 # Import necessary libraries
 import cv2
@@ -170,7 +172,9 @@ def sobel_edge_detection(image, k_size=3):
         case (int() | None) if k_size % 2 == 1: 
             sobel_x = cv2.Sobel(image, cv2.CV_64F, 1, 0, k_size)
             sobel_y = cv2.Sobel(image, cv2.CV_64F, 0, 1, k_size)
-            return cv2.magnitude(sobel_x, sobel_y)
+            magnitude = cv2.magnitude(sobel_x, sobel_y)
+            normalized_magnitude = cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX)
+            return np.uint8(normalized_magnitude)
         case _:
             raise ValueError("Invalid Ksize, it must be an odd value up to 7")
         
@@ -194,7 +198,27 @@ def laplacian_edge_detection(image):
         image: input image or video frame.
     """
     laplacian = cv2.Laplacian(image, cv2.CV_64F)
-    return cv2.convertScaleAbs(laplacian)
+    laplacian_abs = np.absolute(laplacian)
+    laplacian_8bit = np.uint8(laplacian_abs)
+    _, laplacian_thresh = cv2.threshold(laplacian_8bit, 127, 255, cv2.THRESH_BINARY)
+    return laplacian_thresh
+
+def scharr_edge_detection(image):
+    """
+    Applies the Scharr operator for edge detection. Often provides better accuracy than Sobel.
+    inputs:
+        image: input image or video frame.
+    """
+    if len(image.shape) == 3:
+        gray = convert_to_grayscale(image)
+    else:
+        gray = image
+
+    scharr_x = cv2.Scharr(gray, cv2.CV_64F, 1, 0)
+    scharr_y = cv2.Scharr(gray, cv2.CV_64F, 0, 1)
+    magnitude = cv2.magnitude(scharr_x, scharr_y)
+    magnitude_normalized = cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX)
+    return np.uint8(magnitude_normalized)
 
 # ---- 5. Thresholding Techniques ---- #
 def binary_thresholding(image, min_threshold, max_threshold, threshold_type=cv2.THRESH_BINARY):
@@ -206,6 +230,9 @@ def binary_thresholding(image, min_threshold, max_threshold, threshold_type=cv2.
         max_threshold: maximum threshold value.
         threshold_type: threshold type (cv2.THRESH_BINARY or cv2.THRESH_BINARY_INV).
     """
+    if len(image.shape) == 3:
+        image = convert_to_grayscale(image)
+
     match (min_threshold, max_threshold, threshold_type):
         case (int() | float(), int() | float(), int()) if min_threshold >= 0 and max_threshold >= 0 and threshold_type in [cv2.THRESH_BINARY, cv2.THRESH_BINARY_INV]:
             _, thresholded = cv2.threshold(image, min_threshold, max_threshold, threshold_type)
@@ -224,13 +251,16 @@ def adaptive_thresholding(image, max_value=255, adaptive_method=cv2.ADAPTIVE_THR
         block_size: size of the neighborhood area (must be odd and greater than 1).
         C: constant subtracted from the mean or weighted mean.
     """
+    if len(image.shape) == 3:
+        image = convert_to_grayscale(image)
+    
     match (max_value, adaptive_method, threshold_type, block_size, C):
         case (int() | float(), int(), int(), int() | None, int() | None) if block_size > 1 and block_size % 2 == 1:
             return cv2.adaptiveThreshold(image, max_value, adaptive_method, threshold_type, block_size, C)
         case _:
             raise ValueError("Invalid parameters for adaptive thresholding.")
         
-def color_thresholding(image, lower_bound, upper_bound):
+def color_thresholding(image, lower_bound, upper_bound, num_of_thresholds=1):
     """
     Function to perform color thresholding on an input image.
     inputs:
@@ -238,8 +268,21 @@ def color_thresholding(image, lower_bound, upper_bound):
         lower_bound: Lower HSV bound (e.g., np.array([20, 100, 100])).
         upper_bound: Upper HSV bound (e.g., np.array([30, 255, 255])).
     """
-    hsv_img = convert_to_hsv(image)
-    return cv2.inRange(hsv_img, lower_bound, upper_bound)
+    
+    if len(image.shape) != 3:
+        raise ValueError("Input image must be a color image (3 channels in BGR format).")
+    else:
+        hsv_image = convert_to_hsv(image)
+
+    match (num_of_thresholds):
+        case 1:
+            mask = cv2.inRange(hsv_image, lower_bound, upper_bound)
+            return cv2.bitwise_and(image, image, mask=mask)
+        case 2:
+            mask1 = cv2.inRange(hsv_image, lower_bound[0], upper_bound[0])
+            mask2 = cv2.inRange(hsv_image, lower_bound[1], upper_bound[1])
+            combined_mask = cv2.bitwise_or(mask1, mask2)
+            return cv2.bitwise_and(image, image, mask=combined_mask)
         
 # ---- 6. Histogram Operations ---- #
 def plot_histogram(image, image_color, plot_title='Image Histogram', x_label='Pixel Value', y_label='Frequency'):
