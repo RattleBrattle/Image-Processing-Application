@@ -7,13 +7,15 @@
     
     Date of Creation: 9/14/2025
     
-    Version: 0.1
+    Version: 0.3
     
     Email: baselmohamed802@gmail.com
 
     Changelog:
     - 0.1: Initial version with basic color transformation functions. (09/14/2025)
     - 0.2: Finished all functions (09/15/2025)
+    - 0.3: Added new functions and improved error handling (09/15/2025)
+    - 0.4: More new functions. (09/15/2025)
 """
 # Import necessary libraries
 import cv2
@@ -280,20 +282,43 @@ def plot_histogram(image, image_color, plot_title='Image Histogram', x_label='Pi
         case _:
             raise ValueError("Invalid image color. It must be 0 for BGR or 1 for RGB.")
 
-def apply_histogram_equalization(image):
+def equalize_grayscale_histogram(image):
     """ 
-    Function that applies Histogram Equalization to enhance the contrast of the input grayscale image.
-    inputs:
-        image: input grayscale image.
+    Enhances the contrast of a grayscale image using histogram equalization.
+    If a color image is provided, it is converted to grayscale first.
+
+    Args:
+        image: Input image (BGR color or grayscale).
+
+    Returns:
+        numpy.ndarray: A 3-channel BGR image where all channels are equal,
+                       representing the contrast-enhanced grayscale result.
+                       (This output image will appear in grayscale).
     """
     if len(image.shape) == 3:
         gray_img = convert_to_grayscale(image)
     else:
-        gray = image
-    image_eq = cv2.equalizeHist(gray)
+        gray_img = image
+
+    image_eq = cv2.equalizeHist(gray_img)
     return cv2.cvtColor(image_eq, cv2.COLOR_GRAY2BGR)
+
+def equalize_color_histogram(image):
+    """ 
+    Enhances the contrast of a color image by performing histogram equalization
+    only on the Value (brightness) channel of the HSV color space. This preserves
+    the original color information while improving contrast.
+
+    inputs:
+        image: input color image in BGR format.
+    """
+    lab_img = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab_img)
+    l_eq = cv2.equalizeHist(l)
+    lab_eq = cv2.merge((l_eq, a, b))
+    return cv2.cvtColor(lab_eq, cv2.COLOR_LAB2BGR)
     
-def apply_clahe(image, clip_limit=2.0, tile_grid_size=(8, 8)):
+def apply_clahe_grayscale(image, clip_limit=2.0, tile_grid_size=(8, 8)):
     """ 
     Function that applies CLAHE Histogram Equalization to enhance the contrast of the input grayscale image.
     inputs:
@@ -303,10 +328,32 @@ def apply_clahe(image, clip_limit=2.0, tile_grid_size=(8, 8)):
     """
     match tile_grid_size:
         case (int(t1), int(t2)) if t1 > 0 and t2 > 0:
-            gray_image = convert_to_grayscale(image)
+            if len(image.shape) == 3:
+                gray_img = convert_to_grayscale(image)
+            else:
+                gray_img = image
             clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
-            image_clahe = clahe.apply(gray_image)
+            image_clahe = clahe.apply(gray_img)
             return cv2.cvtColor(image_clahe, cv2.COLOR_GRAY2BGR)
+        case _:
+            raise ValueError("Invalid tile grid size. Must be a tuple of two positive integers (e.g., (8, 8)).")
+
+def apply_clahe_color(image, clip_limit=2.0, tile_grid_size=(8, 8)):
+    """
+    Applies CLAHE to the L channel of the LAB color space for better color preservation.
+    inputs:
+        image: input color image in BGR format.
+        clip_limit: threshold for contrast limiting.
+        tile_grid_size: size of grid for histogram equalization.
+    """
+    match tile_grid_size:
+        case (int(t1), int(t2)) if t1 > 0 and t2 > 0:
+            lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+            l, a, b = cv2.split(lab)
+            clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
+            l_clahe = clahe.apply(l)
+            lab_clahe = cv2.merge([l_clahe, a, b])
+            return cv2.cvtColor(lab_clahe, cv2.COLOR_LAB2BGR)
         case _:
             raise ValueError("Invalid tile grid size. Must be a tuple of two positive integers (e.g., (8, 8)).")
         
