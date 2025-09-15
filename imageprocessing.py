@@ -13,6 +13,7 @@
 
     Changelog:
     - 0.1: Initial version with basic color transformation functions. (09/14/2025)
+    - 0.2: Finished all functions (09/15/2025)
 """
 # Import necessary libraries
 import cv2
