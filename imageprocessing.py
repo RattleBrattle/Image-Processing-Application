@@ -73,6 +73,19 @@ def resize_image(image, width=None, height=None, fx=None, fy=None, interpolation
             raise ValueError("Invalid input. Provide either width and/or height as integers or fx and/or fy as floats.")
         
 # ---- 3. Filtering & Smoothing Functions ---- #
+def average_blur(image, kernel_size=(5, 5)):
+    """
+    Function that applies normal (average) blur to an image.
+    inputs:
+        image: input image to apply the blur on.
+        kernel_size: Size of the kernel. Must be a tuple of two positive integers.
+    """
+    match kernel_size:
+        case (int(k1), int(k2)) if k1 > 0 and k2 > 0:
+            return cv2.blur(image, kernel_size)
+        case _:
+            raise ValueError("Invalid kernel size. Must be a tuple of two positive integers (e.g., (5, 5)).")
+        
 def apply_gaussian_blur(image, kernel_size=(5, 5), sigma=0):
     """ 
     Function that applies Gaussian Blur to an image. 
