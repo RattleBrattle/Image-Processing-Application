@@ -240,7 +240,7 @@ def color_thresholding(image, lower_bound, upper_bound):
     return cv2.inRange(hsv_img, lower_bound, upper_bound)
         
 # ---- 6. Histogram Operations ---- #
-def plot_histogram(image, image_color):
+def plot_histogram(image, image_color, plot_title='Image Histogram', x_label='Pixel Value', y_label='Frequency'):
     """ 
     Function to plot the image histogram for all color values.
     inputs:
@@ -255,6 +255,9 @@ def plot_histogram(image, image_color):
                 hist = cv2.calcHist([image], [i], None, [256], [0, 256])
                 plt.plot(hist, color=col)
                 plt.xlim([0, 256])
+                plt.title(plot_title)
+                plt.xlabel(x_label)
+                plt.ylabel(y_label)
             plt.show()
         case 1:
             rgb_channels = ['r', 'g', 'b']
@@ -262,11 +265,17 @@ def plot_histogram(image, image_color):
                 hist = cv2.calcHist([image], [i], None, [256], [0, 256])
                 plt.plot(hist, color=col)
                 plt.xlim([0, 256])
+                plt.title(plot_title)
+                plt.xlabel(x_label)
+                plt.ylabel(y_label)
             plt.show()
         case 2:
             gray_hist = cv2.calcHist([image], [0], None, [256], [0, 256])
             plt.plot(gray_hist, color='k')
             plt.xlim([0, 256])
+            plt.title(plot_title)
+            plt.xlabel(x_label)
+            plt.ylabel(y_label)
             plt.show()
         case _:
             raise ValueError("Invalid image color. It must be 0 for BGR or 1 for RGB.")
