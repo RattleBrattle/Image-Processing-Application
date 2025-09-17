@@ -18,6 +18,7 @@
     - 0.4: More new functions. (09/15/2025)
     - 0.5: Added more functions (09/15/2025)
     - 0.6: Tested all functions output in test.ipynb notebook (09/15/2025)
+    - 0.7: Added new functions and fixed bugs apparent in the streamlit app (09/17/2025)
 """
 # Import necessary libraries
 import cv2
@@ -32,6 +33,18 @@ def convert_to_grayscale(image):
 def convert_to_hsv(image):
     """ Function that converts an image to HSV color space. """
     return cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+def convert_to_lab(image):
+    """ Function that converts an image to LAB color space. """
+    return cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+
+def convert_gray_to_bgr(image):
+    """ Function that converts a grayscale image to BGR color space. """
+    return cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+
+def convert_gray_to_rgb(image):
+    """ Function that converts a grayscale image to RGB color space. """
+    return cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
 
 # ---- 2. Geometric Transformations Functions ---- #
 def flip_image(image, flip_code):
@@ -73,6 +86,8 @@ def resize_image(image, width=None, height=None, fx=None, fy=None, interpolation
             return cv2.resize(image, (width, height), interpolation=interpolation)
         case (None, None, float() | None, float() | None) if fx is not None or fy is not None:
             return cv2.resize(image, None, fx=fx, fy=fy, interpolation=interpolation)
+        case (int() | None, int() | None, float() | None, float() | None) if (width is not None or height is not None) and (fx is not None or fy is not None):
+            return cv2.resize(image, (width, height), fx=fx, fy=fy, interpolation=interpolation)
         case _:
             raise ValueError("Invalid input. Provide either width and/or height as integers or fx and/or fy as floats.")
         

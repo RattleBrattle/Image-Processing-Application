@@ -14,14 +14,109 @@ st.set_page_config(
 )
 
 # -------------------- CUSTOM CSS --------------------
-# Inject custom CSS for styling
+# -------------------- CUSTOM CSS --------------------
 st.markdown("""
 <style>
-    .main-header {font-size: 3rem; color: #1f77b4; margin-bottom: 1rem;}
-    .section-header {font-size: 1.5rem; color: #ff7f0e; border-bottom: 2px solid #ddd; padding-bottom: 0.3rem; margin-top: 2rem;}
-    .success-msg {color: #2ecc71; font-weight: bold;}
-    .error-msg {color: #e74c3c; font-weight: bold;}
-    /* Add more custom styles here */
+    /* Base styles for both themes */
+    .main-header {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-header {
+        font-size: 2rem;
+        font-weight: 600;
+        margin-bottom: 1.2rem;
+    }
+    
+    /* Light theme with green accents */
+    [data-theme="light"],
+    [data-theme="light"] .stApp {
+        --primary: #ffffff;
+        --secondary: #f0f0f0;
+        --text-primary: #31333f;
+        --text-secondary: #595b6b;
+        --accent: #10b981;
+        --accent-light: #a7f3d0;
+        --border: #e5e7eb;
+    }
+    
+    /* Dark theme with blue accents */
+    [data-theme="dark"],
+    [data-theme="dark"] .stApp {
+        --primary: #0e1117;
+        --secondary: #1e2229;
+        --text-primary: #fafafa;
+        --text-secondary: #d1d5db;
+        --accent: #3b82f6;
+        --accent-light: #93c5fd;
+        --border: #374151;
+    }
+    
+    /* Apply theme variables */
+    .stApp {
+        background-color: var(--primary);
+        color: var(--text-primary);
+    }
+    
+    /* Sidebar styling */
+    .css-1d391kg, .css-1y4p8pa {
+        background-color: var(--secondary) !important;
+        border-right: 1px solid var(--border);
+    }
+    
+    .stSidebar .stSelectbox, .stSidebar .stMarkdown, .stSidebar .stTitle {
+        color: var(--text-primary) !important;
+    }
+    
+    /* Select boxes and inputs */
+    .stSelectbox > div > div {
+        background-color: var(--secondary);
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+    }
+    
+    .stSelectbox label {
+        color: var(--text-primary) !important;
+    }
+    
+    /* Sliders */
+    .stSlider > div > div {
+        color: var(--accent) !important;
+    }
+    
+    /* Buttons and interactive elements */
+    .stButton > button {
+        background-color: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+    
+    .stButton > button:hover {
+        background-color: var(--accent-light);
+        color: var(--text-primary);
+    }
+    
+    /* Divider line */
+    .stMarkdown > hr {
+        border-color: var(--border);
+        margin: 2rem 0;
+    }
+    
+    /* Footer styling */
+    .stMarkdown:last-child {
+        color: var(--text-secondary);
+    }
+    
+    /* Adjust image borders to match theme */
+    .stImage > img {
+        border: 1px solid var(--border);
+        border-radius: 4px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -45,15 +140,15 @@ with st.sidebar:
 # -------------------- THEME APPLY --------------------
 if theme == "Dark":
     st.markdown("""
-    <style>
-        .stApp {background-color: #0e1117; color: #fafafa;}
-    </style>
+    <script>
+        document.body.setAttribute('data-theme', 'dark');
+    </script>
     """, unsafe_allow_html=True)
 else:
     st.markdown("""
-    <style>
-        .stApp {background-color: #ffffff; color: #31333f;}
-    </style>
+    <script>
+        document.body.setAttribute('data-theme', 'light');
+    </script>
     """, unsafe_allow_html=True)
 
 # -------------------- IMAGE PROCESSING --------------------
@@ -83,7 +178,7 @@ if app_mode == "Home":
     """)
     
     if uploaded_file is not None:
-        st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
+        st.image(uploaded_file, caption="Uploaded Image", width='stretch')
 
 # -------------------- COLOR TRANSFORMATIONS --------------------
 elif app_mode == "Color Transformations":
@@ -94,7 +189,7 @@ elif app_mode == "Color Transformations":
         col1, col2 = st.columns(2)
         
         with col1:
-            st.image(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), caption="Original Image", use_column_width=True)
+            st.image(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), caption="Original Image", width='stretch')
         
         with col2:
             option = st.selectbox("Select Transformation", 
@@ -102,11 +197,11 @@ elif app_mode == "Color Transformations":
             
             if option == "Grayscale":
                 result = ip.convert_to_grayscale(image)
-                st.image(result, caption="Grayscale Image", use_column_width=True, channels='GRAY')
+                st.image(result, caption="Grayscale Image", width='stretch', channels='GRAY')
             elif option == "HSV":
                 result = ip.convert_to_hsv(image)
                 # Convert HSV to RGB for display (HSV display is not straightforward)
-                st.image(cv2.cvtColor(result, cv2.COLOR_HSV2RGB), caption="HSV Image", use_column_width=True)
+                st.image(cv2.cvtColor(result, cv2.COLOR_HSV2RGB), caption="HSV Image", width='stretch')
 
 # -------------------- GEOMETRIC TRANSFORMATIONS --------------------
 elif app_mode == "Geometric Transformations":
@@ -117,7 +212,7 @@ elif app_mode == "Geometric Transformations":
         col1, col2 = st.columns(2)
         
         with col1:
-            st.image(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), caption="Original Image", use_column_width=True)
+            st.image(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), caption="Original Image", width='stretch')
         
         with col2:
             option = st.selectbox("Select Transformation", 
@@ -128,18 +223,18 @@ elif app_mode == "Geometric Transformations":
                                         ["Horizontal (1)", "Vertical (0)", "Both (-1)"])
                 code_map = {"Horizontal (1)": 1, "Vertical (0)": 0, "Both (-1)": -1}
                 result = ip.flip_image(image, code_map[flip_code])
-                st.image(cv2.cvtColor(result, cv2.COLOR_BGR2RGB), caption="Flipped Image", use_column_width=True)
+                st.image(cv2.cvtColor(result, cv2.COLOR_BGR2RGB), caption="Flipped Image", width='stretch')
                 
             elif option == "Rotate":
                 angle = st.slider("Rotation Angle", -180, 180, 45)
                 result = ip.rotate_image(image, angle)
-                st.image(cv2.cvtColor(result, cv2.COLOR_BGR2RGB), caption=f"Rotated {angle}°", use_column_width=True)
+                st.image(cv2.cvtColor(result, cv2.COLOR_BGR2RGB), caption=f"Rotated {angle}°", width='stretch')
                 
             elif option == "Resize":
                 width = st.slider("Width", 50, 1000, image.shape[1])
                 height = st.slider("Height", 50, 1000, image.shape[0])
                 result = ip.resize_image(image, width=width, height=height)
-                st.image(cv2.cvtColor(result, cv2.COLOR_BGR2RGB), caption="Resized Image", use_column_width=True)
+                st.image(cv2.cvtColor(result, cv2.COLOR_BGR2RGB), caption="Resized Image", width='stretch')
 
 # -------------------- ADD MORE SECTIONS HERE --------------------
 # [Add similar sections for Filtering, Edge Detection, Thresholding, etc.]
