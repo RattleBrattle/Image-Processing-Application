@@ -179,6 +179,8 @@ if uploaded_file:
             elif option == "Color Thresholding":
                 num_thresh = st.sidebar.radio("Num Thresholds", ["Single mask", "Two masks"], index=0)
 
+                mask = None  # <-- we’ll keep the mask to show it separately
+
                 if num_thresh == "Single mask":
                     lower = [
                         st.sidebar.slider("Lower H", 0, 179, 0),
@@ -193,7 +195,10 @@ if uploaded_file:
 
                     lower = np.array(lower, dtype=np.uint8)
                     upper = np.array(upper, dtype=np.uint8)
-                    processed_img = ipm.color_thresholding(image, lower, upper, num_of_thresholds=1)
+
+                    hsv_image = ipm.convert_to_hsv(image)
+                    mask = cv2.inRange(hsv_image, lower, upper)
+                    processed_img = cv2.bitwise_and(image, image, mask=mask)
 
                 elif num_thresh == "Two masks":
                     st.sidebar.markdown("### Mask 1")
@@ -223,7 +228,24 @@ if uploaded_file:
                     lower_bounds = [np.array(lower1, dtype=np.uint8), np.array(lower2, dtype=np.uint8)]
                     upper_bounds = [np.array(upper1, dtype=np.uint8), np.array(upper2, dtype=np.uint8)]
 
-                    processed_img = ipm.color_thresholding(image, lower_bounds, upper_bounds, num_of_thresholds=2)
+                    hsv_image = ipm.convert_to_hsv(image)
+                    mask1 = cv2.inRange(hsv_image, lower_bounds[0], upper_bounds[0])
+                    mask2 = cv2.inRange(hsv_image, lower_bounds[1], upper_bounds[1])
+                    mask = cv2.bitwise_or(mask1, mask2)
+
+                    processed_img = cv2.bitwise_and(image, image, mask=mask)
+
+                # ---- Display mask + processed image ---- #
+                if mask is not None and processed_img is not None:
+                    col_mask, col_result = st.columns(2)
+
+                    with col_mask:
+                        st.subheader("Mask Preview")
+                        st.image(mask, use_container_width=True, caption="Binary Mask (white = selected)")
+
+                    with col_result:
+                        st.subheader("Processed with Mask")
+                        st.image(convert_opencv_to_pil(processed_img), use_container_width=True)
 
         elif operation_category == "Histogram":
             option = st.sidebar.selectbox("Select Function", ["Equalize Gray", "Equalize Color", "CLAHE Gray", "CLAHE Color"])
@@ -242,6 +264,7 @@ if uploaded_file:
 
         elif operation_category == "Contours":
             option = st.sidebar.selectbox("Contour Type", ["Rectangle", "Circle", "Ellipse", "Polygon", "Normal"])
+            rtr_type = st.side
             processed_img = ipm.find_and_draw_contours(image, option)
 
         # ---- Display processed image ---- #
