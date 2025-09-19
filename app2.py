@@ -50,6 +50,20 @@ def get_download_link(img, filename="processed.png"):
     href = f'<a href="data:file/png;base64,{b64}" download="{filename}">📥 Download Processed Image</a>'
     return href
 
+import time
+
+def process_with_progress(func, *args, **kwargs):
+    """Wrapper to show spinner + progress bar while running a function."""
+    with st.spinner("✨ Processing image... please wait!"):
+        progress_bar = st.progress(0, text="Starting...")
+        for i in range(0, 100, 20):  # simulate staged progress
+            time.sleep(0.2)
+            progress_bar.progress(i, text=f"Working... {i}%")
+        result = func(*args, **kwargs)
+        progress_bar.progress(100, text="✅ Done!")
+        time.sleep(0.3)
+    return result
+
 # ---- Sidebar ---- #
 st.sidebar.title("⚙️ Controls")
 
@@ -249,23 +263,99 @@ if uploaded_file:
 
         elif operation_category == "Histogram":
             option = st.sidebar.selectbox("Select Function", ["Equalize Gray", "Equalize Color", "CLAHE Gray", "CLAHE Color"])
+
+            # Apply processing
             if option == "Equalize Gray":
-                processed_img = ipm.equalize_grayscale_histogram(image)
+                processed_img = process_with_progress(ipm.equalize_grayscale_histogram, image)
             elif option == "Equalize Color":
-                processed_img = ipm.equalize_color_histogram(image)
+                processed_img = process_with_progress(ipm.equalize_color_histogram, image)
             elif option == "CLAHE Gray":
                 clip_limit = st.sidebar.slider("Clip Limit", 1.0, 15.0, 2.0, step=0.5)
                 tile_grid_size = st.sidebar.slider("Tile Grid Size", 1, 15, 8, step=1)
-                processed_img = ipm.apply_clahe_grayscale(image, clip_limit, (tile_grid_size, tile_grid_size))
+                processed_img = process_with_progress(ipm.apply_clahe_grayscale, image, clip_limit, (tile_grid_size, tile_grid_size))
             elif option == "CLAHE Color":
                 clip_limit = st.sidebar.slider("Clip Limit", 1.0, 15.0, 2.0, step=0.5)
                 tile_grid_size = st.sidebar.slider("Tile Grid Size", 1, 15, 8, step=1)
-                processed_img = ipm.apply_clahe_color(image, clip_limit, (tile_grid_size, tile_grid_size))
+                processed_img = process_with_progress(ipm.apply_clahe_color, image, clip_limit, (tile_grid_size, tile_grid_size))
+
+            # ---- Plot Histograms ---- #
+            import matplotlib.pyplot as plt
+
+            def plot_histogram(img, title):
+                fig, ax = plt.subplots()
+                if len(img.shape) == 2:  # Grayscale
+                    ax.hist(img.ravel(), bins=256, range=[0, 256], color="black")
+                else:  # Color
+                    colors = ("b", "g", "r")
+                    for i, col in enumerate(colors):
+                        ax.hist(img[:, :, i].ravel(), bins=256, range=[0, 256], color=col, alpha=0.5)
+                ax.set_title(title)
+                ax.set_xlim([0, 256])
+                return fig
+
+            colA, colB = st.columns(2)
+            with colA:
+                st.subheader("Original Histogram")
+                st.pyplot(plot_histogram(image, "Original Histogram"))
+            with colB:
+                st.subheader("Processed Histogram")
+                st.pyplot(plot_histogram(processed_img, "Processed Histogram"))
 
         elif operation_category == "Contours":
-            option = st.sidebar.selectbox("Contour Type", ["Rectangle", "Circle", "Ellipse", "Polygon", "Normal"])
-            rtr_type = st.side
-            processed_img = ipm.find_and_draw_contours(image, option)
+            option = st.sidebar.selectbox(
+                "Contour Type",
+                ["Rectangle", "Circle", "Ellipse", "Polygon", "Normal"]
+            )
+
+            # Retrieval Mode
+            rtr_type = st.sidebar.selectbox(
+                "Retrieval Mode",
+                {
+                    "External": cv2.RETR_EXTERNAL,
+                    "List": cv2.RETR_LIST,
+                    "Tree": cv2.RETR_TREE,
+                    "CComp": cv2.RETR_CCOMP,
+                }.keys()
+            )
+            rtr_type_val = {
+                "External": cv2.RETR_EXTERNAL,
+                "List": cv2.RETR_LIST,
+                "Tree": cv2.RETR_TREE,
+                "CComp": cv2.RETR_CCOMP,
+            }[rtr_type]
+
+            # Approximation Method
+            rtr_approximation = st.sidebar.selectbox(
+                "Approximation Method",
+                {
+                    "CHAIN_APPROX_SIMPLE": cv2.CHAIN_APPROX_SIMPLE,
+                    "CHAIN_APPROX_NONE": cv2.CHAIN_APPROX_NONE,
+                }.keys()
+            )
+            rtr_approximation_val = {
+                "CHAIN_APPROX_SIMPLE": cv2.CHAIN_APPROX_SIMPLE,
+                "CHAIN_APPROX_NONE": cv2.CHAIN_APPROX_NONE,
+            }[rtr_approximation]
+
+            # Border Color (RGB sliders)
+            st.sidebar.markdown("### Border Color")
+            r = st.sidebar.slider("R", 0, 255, 0)
+            g = st.sidebar.slider("G", 0, 255, 255)
+            b = st.sidebar.slider("B", 0, 255, 0)
+            border_color = (r, g, b)
+
+            # Line Thickness
+            line_thickness = st.sidebar.slider("Line Thickness", 1, 10, 3)
+
+            # Apply contours function
+            processed_img = ipm.find_and_draw_contours(
+                image,
+                option,
+                rtr_type=rtr_type_val,
+                rtr_approximation=rtr_approximation_val,
+                border_color=border_color,
+                line_thickness=line_thickness
+            )
 
         # ---- Display processed image ---- #
         if processed_img is not None:
